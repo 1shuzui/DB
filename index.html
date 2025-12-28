@@ -1,0 +1,2234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工厂氟胶垫片库存交易管理系统</title>
+    <!-- 引入样式库 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- 引入Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 引入Font Awesome图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .sidebar {
+            background-color: var(--primary-color);
+            color: white;
+            min-height: 100vh;
+            padding: 0;
+        }
+        
+        .sidebar .nav-link {
+            color: #ecf0f1;
+            padding: 15px 20px;
+            border-left: 4px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left-color: var(--secondary-color);
+            color: white;
+        }
+        
+        .sidebar .nav-link i {
+            width: 25px;
+            text-align: center;
+            margin-right: 10px;
+        }
+        
+        .content-header {
+            background-color: white;
+            padding: 20px;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            border: none;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            transition: transform 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card {
+            border-radius: 10px;
+            padding: 20px;
+            color: white;
+        }
+        
+        .stat-card.blue { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .stat-card.green { background: linear-gradient(135deg, #27ae60, #229954); }
+        .stat-card.orange { background: linear-gradient(135deg, #f39c12, #d68910); }
+        .stat-card.red { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        
+        .alert-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        
+        .product-img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 5px;
+            background-color: #ecf0f1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #7f8c8d;
+        }
+        
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-active { background-color: #d5f4e6; color: #27ae60; }
+        .status-inactive { background-color: #fadbd8; color: #e74c3c; }
+        .status-pending { background-color: #fef9e7; color: #f39c12; }
+        
+        .material-badge {
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .material-fluor { background-color: #d6eaf8; color: #3498db; }
+        .material-gasket { background-color: #fdebd0; color: #e67e22; }
+        
+        .table-hover tbody tr:hover {
+            background-color: rgba(52, 152, 219, 0.05);
+        }
+        
+        /* 连接状态指示器 */
+        .connection-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .connection-connected { background-color: #d5f4e6; color: #27ae60; border: 1px solid #27ae60; }
+        .connection-disconnected { background-color: #fadbd8; color: #e74c3c; border: 1px solid #e74c3c; }
+        
+        /* 加载动画 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            display: none;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 操作按钮组 */
+        .btn-action-group {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .btn-action-group .btn {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 加载动画 -->
+    <div class="loading-overlay" id="loading">
+        <div class="spinner"></div>
+    </div>
+    
+    <!-- 连接状态指示器 -->
+    <div class="connection-status connection-disconnected" id="connection-status">
+        <i class="fas fa-plug"></i> <span id="connection-text">连接中...</span>
+    </div>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <div class="col-md-2 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <h4 class="px-3 mb-4 mt-3">
+                        <i class="fas fa-industry"></i> 工厂管理系统
+                    </h4>
+                    
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#dashboard" data-bs-toggle="tab">
+                                <i class="fas fa-tachometer-alt"></i> 仪表盘
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#products" data-bs-toggle="tab">
+                                <i class="fas fa-boxes"></i> 产品管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#inventory" data-bs-toggle="tab">
+                                <i class="fas fa-warehouse"></i> 库存管理
+                                <span class="alert-badge" id="alert-count">0</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#purchase" data-bs-toggle="tab">
+                                <i class="fas fa-shopping-cart"></i> 采购管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#sales" data-bs-toggle="tab">
+                                <i class="fas fa-chart-line"></i> 销售管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#customers" data-bs-toggle="tab">
+                                <i class="fas fa-users"></i> 客户管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#suppliers" data-bs-toggle="tab">
+                                <i class="fas fa-truck"></i> 供应商管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#reports" data-bs-toggle="tab">
+                                <i class="fas fa-chart-pie"></i> 统计报表
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#system" data-bs-toggle="tab">
+                                <i class="fas fa-cog"></i> 系统设置
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <div class="px-3 mt-5">
+                        <div class="card bg-dark text-white">
+                            <div class="card-body">
+                                <h6><i class="fas fa-info-circle"></i> 系统信息</h6>
+                                <small>
+                                    <div>产品总数: <span id="total-products">0</span></div>
+                                    <div>库存总额: ¥<span id="total-inventory">0</span></div>
+                                    <div>今日订单: <span id="today-orders">0</span></div>
+                                    <div>API状态: <span id="api-status">❌ 未连接</span></div>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 主内容区 -->
+            <div class="col-md-10 col-lg-10 ms-sm-auto px-0">
+                <!-- 顶部导航 -->
+                <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
+                    <div class="container-fluid">
+                        <button class="navbar-toggler d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
+                        
+                        <div class="d-flex align-items-center">
+                            <h5 class="mb-0" id="page-title">仪表盘</h5>
+                        </div>
+                        
+                        <div class="d-flex align-items-center">
+                            <div class="dropdown me-3">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-plus"></i> 新建
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="showNewProductModal()"><i class="fas fa-box me-2"></i>新产品</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="showNewOrderModal('purchase')"><i class="fas fa-shopping-cart me-2"></i>采购订单</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="showNewOrderModal('sales')"><i class="fas fa-file-invoice-dollar me-2"></i>销售订单</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="showNewCustomerModal()"><i class="fas fa-user-plus me-2"></i>新客户</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="showNewSupplierModal()"><i class="fas fa-truck me-2"></i>新供应商</a></li>
+                                </ul>
+                            </div>
+                            
+                            <div class="dropdown me-3">
+                                <button class="btn btn-outline-info btn-sm" type="button" onclick="testConnection()">
+                                    <i class="fas fa-sync-alt"></i> 测试连接
+                                </button>
+                            </div>
+                            
+                            <div class="dropdown">
+                                <button class="btn btn-light rounded-circle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-user"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><h6 class="dropdown-header">管理员</h6></li>
+                                    <li><a class="dropdown-item" href="#" onclick="showSystemInfo()"><i class="fas fa-info-circle me-2"></i>系统信息</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="showDatabaseStatus()"><i class="fas fa-database me-2"></i>数据库状态</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" onclick="location.reload()"><i class="fas fa-sync-alt me-2"></i>刷新页面</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
+                
+                <!-- 标签页内容 -->
+                <div class="tab-content p-3" id="nav-tabContent">
+                    <!-- 仪表盘 -->
+                    <div class="tab-pane fade show active" id="dashboard">
+                        <!-- 统计卡片 -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="card stat-card blue">
+                                    <div class="card-body">
+                                        <h5 class="card-title">总库存价值</h5>
+                                        <h2 class="mb-0">¥ <span id="stat-total-value">0</span></h2>
+                                        <small class="text-white-50">共 <span id="stat-total-items">0</span> 个产品</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card stat-card green">
+                                    <div class="card-body">
+                                        <h5 class="card-title">本月销售额</h5>
+                                        <h2 class="mb-0">¥ <span id="stat-month-sales">0</span></h2>
+                                        <small class="text-white-50">较上月 <span id="stat-sales-growth">0%</span></small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card stat-card orange">
+                                    <div class="card-body">
+                                        <h5 class="card-title">库存预警</h5>
+                                        <h2 class="mb-0"><span id="stat-alerts">0</span> 个</h2>
+                                        <small class="text-white-50"><span id="stat-low-stock">0</span> 个库存不足</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card stat-card red">
+                                    <div class="card-body">
+                                        <h5 class="card-title">待处理订单</h5>
+                                        <h2 class="mb-0"><span id="stat-pending-orders">0</span> 个</h2>
+                                        <small class="text-white-50"><span id="stat-pending-purchase">0</span> 采购 / <span id="stat-pending-sales">0</span> 销售</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 图表区 -->
+                        <div class="row mb-4">
+                            <div class="col-md-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>月度销售趋势</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-container">
+                                            <canvas id="salesChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>产品类别分布</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-container">
+                                            <canvas id="categoryChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 库存预警列表 -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0"><i class="fas fa-exclamation-triangle text-warning me-2"></i>库存预警</h6>
+                                        <small class="text-muted">实时监控</small>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover mb-0" id="alerts-table">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>产品编码</th>
+                                                        <th>产品名称</th>
+                                                        <th>当前库存</th>
+                                                        <th>预警类型</th>
+                                                        <th>操作</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <!-- 动态加载 -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0"><i class="fas fa-history me-2"></i>近期库存变动</h6>
+                                        <small class="text-muted">最近10条记录</small>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover mb-0" id="transactions-table">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>时间</th>
+                                                        <th>产品</th>
+                                                        <th>类型</th>
+                                                        <th>变动量</th>
+                                                        <th>结存</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <!-- 动态加载 -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 产品管理 -->
+                    <div class="tab-pane fade" id="products">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">产品列表</h5>
+                                <div>
+                                    <button class="btn btn-primary btn-sm" onclick="showNewProductModal()">
+                                        <i class="fas fa-plus me-1"></i>添加产品
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm ms-2" onclick="exportProducts()">
+                                        <i class="fas fa-download me-1"></i>导出
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <!-- 筛选工具栏 -->
+                                <div class="row mb-3">
+                                    <div class="col-md-3">
+                                        <select class="form-select form-select-sm" id="filter-material" onchange="loadProducts(1)">
+                                            <option value="">全部材料类型</option>
+                                            <option value="氟胶">氟胶</option>
+                                            <option value="垫片">垫片</option>
+                                            <option value="其他">其他</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <select class="form-select form-select-sm" id="filter-category" onchange="loadProducts(1)">
+                                            <option value="">全部类别</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <select class="form-select form-select-sm" id="filter-status" onchange="loadProducts(1)">
+                                            <option value="">全部状态</option>
+                                            <option value="正常">正常</option>
+                                            <option value="停用">停用</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control" placeholder="搜索产品名称或编码" id="search-product">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="loadProducts(1)">
+                                                <i class="fas fa-search"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 产品表格 -->
+                                <div class="table-responsive">
+                                    <table class="table table-hover" id="products-table">
+                                        <thead>
+                                            <tr>
+                                                <th>产品编码</th>
+                                                <th>产品名称</th>
+                                                <th>类别</th>
+                                                <th>材料类型</th>
+                                                <th>规格</th>
+                                                <th>单价</th>
+                                                <th>库存</th>
+                                                <th>状态</th>
+                                                <th>操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- 动态加载 -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <!-- 分页 -->
+                                <nav aria-label="产品分页">
+                                    <ul class="pagination justify-content-center" id="products-pagination">
+                                        <!-- 动态生成 -->
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 库存管理 -->
+                    <div class="tab-pane fade" id="inventory">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">库存明细</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- 库存统计 -->
+                                <div class="row mb-4">
+                                    <div class="col-md-12">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h6>氟胶制品库存</h6>
+                                            <small class="text-muted">总价值: ¥<span id="fluor-total-value">0</span></small>
+                                        </div>
+                                        <div class="progress mb-3" style="height: 20px;">
+                                            <div class="progress-bar bg-info" role="progressbar" id="fluor-progress" style="width: 0%"></div>
+                                        </div>
+                                        
+                                        <h6 class="mt-4">垫片制品库存</h6>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="progress mb-3" style="height: 20px; flex-grow: 1;">
+                                                <div class="progress-bar bg-warning" role="progressbar" id="gasket-progress" style="width: 0%"></div>
+                                            </div>
+                                            <small class="text-muted ms-3">总价值: ¥<span id="gasket-total-value">0</span></small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 库存明细表格 -->
+                                <div class="table-responsive">
+                                    <table class="table table-hover" id="inventory-table">
+                                        <thead>
+                                            <tr>
+                                                <th>产品编码</th>
+                                                <th>产品名称</th>
+                                                <th>材料类型</th>
+                                                <th>当前库存</th>
+                                                <th>最低库存</th>
+                                                <th>最高库存</th>
+                                                <th>库存状态</th>
+                                                <th>仓库位置</th>
+                                                <th>操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- 动态加载 -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 统计报表 -->
+                    <div class="tab-pane fade" id="reports">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">销售统计报表</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- 报表筛选 -->
+                                        <div class="row mb-4">
+                                            <div class="col-md-3">
+                                                <label class="form-label">开始日期</label>
+                                                <input type="date" class="form-control" id="report-start-date">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">结束日期</label>
+                                                <input type="date" class="form-control" id="report-end-date">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">统计维度</label>
+                                                <select class="form-select" id="report-dimension">
+                                                    <option value="daily">按日</option>
+                                                    <option value="monthly">按月</option>
+                                                    <option value="category">按产品类别</option>
+                                                    <option value="customer">按客户</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3 d-flex align-items-end">
+                                                <button class="btn btn-primary" onclick="generateReport()">
+                                                    <i class="fas fa-chart-bar me-1"></i>生成报表
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- 报表图表 -->
+                                        <div class="chart-container">
+                                            <canvas id="reportChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 系统设置 -->
+                    <div class="tab-pane fade" id="system">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">系统设置</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>API连接配置</h6>
+                                        <div class="mb-3">
+                                            <label class="form-label">API地址</label>
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" id="api-url" value="http://127.0.0.1:5000/api">
+                                                <button class="btn btn-outline-secondary" type="button" onclick="updateApiUrl()">
+                                                    更新
+                                                </button>
+                                            </div>
+                                            <small class="text-muted">当前API地址: <span id="current-api-url">http://127.0.0.1:5000/api</span></small>
+                                        </div>
+                                        
+                                        <button class="btn btn-info mb-3" onclick="testConnection()">
+                                            <i class="fas fa-plug me-1"></i>测试API连接
+                                        </button>
+                                        
+                                        <h6 class="mt-4">数据库状态</h6>
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <div id="database-status">正在检查数据库状态...</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <h6>系统信息</h6>
+                                        <ul class="list-group">
+                                            <li class="list-group-item d-flex justify-content-between">
+                                                <span>前端版本</span>
+                                                <span class="badge bg-primary">1.0.0</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between">
+                                                <span>后端API版本</span>
+                                                <span class="badge bg-primary" id="api-version">未知</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between">
+                                                <span>数据库版本</span>
+                                                <span class="badge bg-primary" id="db-version">未知</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between">
+                                                <span>最后数据同步</span>
+                                                <span id="last-sync">从未同步</span>
+                                            </li>
+                                        </ul>
+                                        
+                                        <h6 class="mt-4">系统操作</h6>
+                                        <div class="d-grid gap-2">
+                                            <button class="btn btn-outline-primary" onclick="location.reload()">
+                                                <i class="fas fa-sync-alt me-1"></i>刷新页面
+                                            </button>
+                                            <button class="btn btn-outline-success" onclick="loadAllData()">
+                                                <i class="fas fa-database me-1"></i>重新加载数据
+                                            </button>
+                                            <button class="btn btn-outline-warning" onclick="clearCache()">
+                                                <i class="fas fa-trash-alt me-1"></i>清除缓存
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 模态框 - 新建产品 -->
+    <div class="modal fade" id="newProductModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">添加新产品</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="new-product-form">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">产品编码 *</label>
+                                <input type="text" class="form-control" name="product_code" required id="new-product-code">
+                                <small class="text-muted">例如: P001, P002</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">产品名称 *</label>
+                                <input type="text" class="form-control" name="product_name" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">材料类型 *</label>
+                                <select class="form-select" name="material_type" required>
+                                    <option value="氟胶">氟胶</option>
+                                    <option value="垫片">垫片</option>
+                                    <option value="其他">其他</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">产品类别</label>
+                                <select class="form-select" name="category_id" id="product-category-select">
+                                    <option value="">选择类别</option>
+                                    <option value="1">密封件</option>
+                                    <option value="2">垫片</option>
+                                    <option value="3">O型圈</option>
+                                    <option value="4">其他配件</option>
+                                </select>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">规格描述</label>
+                                <textarea class="form-control" name="specification" rows="2" placeholder="例如: 内径10mm,截面2mm,耐高温250°C"></textarea>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">单价 (元) *</label>
+                                <input type="number" class="form-control" name="unit_price" step="0.01" min="0" required value="0">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">计量单位</label>
+                                <input type="text" class="form-control" name="unit" value="个">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">初始库存</label>
+                                <input type="number" class="form-control" name="current_stock" min="0" value="0">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">最低库存预警</label>
+                                <input type="number" class="form-control" name="min_stock_level" min="0" value="10">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">最高库存预警</label>
+                                <input type="number" class="form-control" name="max_stock_level" min="0" value="1000">
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">仓库位置</label>
+                                <input type="text" class="form-control" name="warehouse_location" placeholder="例如: A区-01架">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="submitNewProduct()">保存产品</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模态框 - 编辑产品 -->
+    <div class="modal fade" id="editProductModal" tabindex="-1">
+        <!-- 动态生成 -->
+    </div>
+
+    <!-- 模态框 - 新建订单 -->
+    <div class="modal fade" id="newOrderModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="order-modal-title">新建订单</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6>订单基本信息</h6>
+                            <div id="order-base-form">
+                                <!-- 动态加载 -->
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h6>订单明细</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm" id="order-items-table">
+                                    <thead>
+                                        <tr>
+                                            <th>产品</th>
+                                            <th>数量</th>
+                                            <th>单价</th>
+                                            <th>金额</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- 动态加载 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <button class="btn btn-sm btn-outline-primary" onclick="addOrderItem()">
+                                    <i class="fas fa-plus me-1"></i>添加产品
+                                </button>
+                                <div>
+                                    <strong>订单总额: ¥<span id="order-total-amount">0.00</span></strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="submitOrder()">提交订单</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 系统信息模态框 -->
+    <div class="modal fade" id="systemInfoModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">系统信息</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>连接状态</h6>
+                    <p id="system-info-status">正在检查...</p>
+                    
+                    <h6 class="mt-3">API端点</h6>
+                    <ul id="system-info-endpoints">
+                        <!-- 动态加载 -->
+                    </ul>
+                    
+                    <h6 class="mt-3">数据库信息</h6>
+                    <p id="system-info-database">正在检查...</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // ==================== 全局变量和配置 ====================
+        let API_BASE = 'http://127.0.0.1:5000/api';
+        let currentOrderType = ''; // 'purchase' 或 'sales'
+        let currentPage = 1;
+        let totalPages = 1;
+        let connectionStatus = false;
+        let productsData = [];
+        
+        // ==================== 工具函数 ====================
+        // 数据清洗函数 - 修复product.unit_price.toFixed is not a function错误
+        function sanitizeProductData(products) {
+            return products.map(product => ({
+                ...product,
+                unit_price: parseFloat(product.unit_price) || 0,
+                current_stock: parseInt(product.current_stock) || 0,
+                min_stock_level: parseInt(product.min_stock_level) || 10,
+                max_stock_level: parseInt(product.max_stock_level) || 1000
+            }));
+        }
+
+        // ==================== 页面初始化 ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('页面加载完成');
+
+            // 更新API显示
+            document.getElementById('current-api-url').textContent = API_BASE;
+            document.getElementById('api-url').value = API_BASE;
+
+            // 测试连接
+            testConnection();
+
+            // 加载仪表盘数据
+            loadDashboardData();
+
+            // 加载产品类别
+            loadCategories();
+
+            // 标签页切换事件
+            document.querySelectorAll('.sidebar .nav-link').forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const target = this.getAttribute('href').substring(1);
+                    document.getElementById('page-title').textContent = this.textContent.trim();
+
+                    // 加载对应标签页数据
+                    switch(target) {
+                        case 'dashboard':
+                            loadDashboardData();
+                            break;
+                        case 'products':
+                            loadProducts();
+                            break;
+                        case 'inventory':
+                            loadInventory();
+                            break;
+                        case 'reports':
+                            loadReports();
+                            break;
+                        case 'system':
+                            loadSystemInfo();
+                            break;
+                    }
+                });
+            });
+        });
+
+        // ==================== 工具函数 ====================
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'flex' : 'none';
+        }
+
+        function updateConnectionStatus(status, message) {
+            connectionStatus = status;
+            const statusElement = document.getElementById('connection-status');
+            const textElement = document.getElementById('connection-text');
+            const apiStatusElement = document.getElementById('api-status');
+
+            if (status) {
+                statusElement.className = 'connection-status connection-connected';
+                textElement.textContent = '已连接';
+                apiStatusElement.innerHTML = '✅ 已连接';
+                apiStatusElement.className = 'text-success';
+            } else {
+                statusElement.className = 'connection-status connection-disconnected';
+                textElement.textContent = message || '未连接';
+                apiStatusElement.innerHTML = '❌ 未连接';
+                apiStatusElement.className = 'text-danger';
+            }
+        }
+
+        // ==================== 连接测试 ====================
+        async function testConnection() {
+            try {
+                showLoading(true);
+                console.log('测试API连接:', API_BASE);
+
+                const res = await fetch(API_BASE.replace('/api', '/api/test'));
+
+                if (res.ok) {
+                    const data = await res.json();
+                    console.log('API测试成功:', data);
+
+                    updateConnectionStatus(true, 'API连接正常');
+
+                    // 显示成功消息
+                    alert(`✅ API连接成功！\n\n状态: ${data.message}\n数据库: ${data.database || '已连接'}`);
+
+                    // 更新API版本信息
+                    if (data.version) {
+                        document.getElementById('api-version').textContent = data.version;
+                    }
+
+                    return true;
+                } else {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+            } catch (error) {
+                console.error('API连接测试失败:', error);
+                updateConnectionStatus(false, '连接失败');
+
+                alert(`❌ API连接失败！\n\n错误: ${error.message}\n\n请检查:\n1. Flask服务是否正在运行\n2. API地址是否正确: ${API_BASE}\n3. 在浏览器中访问: ${API_BASE.replace('/api', '/api/test')}`);
+
+                return false;
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // ==================== 数据加载函数 ====================
+        async function loadDashboardData() {
+            try {
+                console.log('加载仪表盘数据...');
+
+                // 加载产品数据
+                const productsRes = await fetch(`${API_BASE}/products?limit=1000`);
+                if (!productsRes.ok) {
+                    throw new Error('加载产品数据失败');
+                }
+
+                const productsData = await productsRes.json();
+                // 使用数据清洗函数确保数据类型正确
+                const products = sanitizeProductData(productsData.data);
+
+                // 计算统计值
+                let totalValue = 0;
+                let totalItems = 0;
+                let fluorValue = 0;
+                let gasketValue = 0;
+                let lowStockCount = 0;
+                let totalProducts = 0;
+
+                products.forEach(product => {
+                    const itemValue = product.current_stock * product.unit_price;
+                    totalValue += itemValue;
+                    totalItems += product.current_stock;
+                    totalProducts++;
+
+                    if (product.material_type === '氟胶') {
+                        fluorValue += itemValue;
+                    } else if (product.material_type === '垫片') {
+                        gasketValue += itemValue;
+                    }
+
+                    if (product.current_stock < product.min_stock_level) {
+                        lowStockCount++;
+                    }
+                });
+
+                // 更新统计卡片
+                document.getElementById('stat-total-value').textContent = totalValue.toFixed(2);
+                document.getElementById('stat-total-items').textContent = totalItems;
+                document.getElementById('stat-alerts').textContent = lowStockCount;
+                document.getElementById('stat-low-stock').textContent = lowStockCount;
+                document.getElementById('total-products').textContent = totalProducts;
+                document.getElementById('total-inventory').textContent = totalValue.toFixed(2);
+
+                // 加载库存预警
+                try {
+                    const alertsRes = await fetch(`${API_BASE}/inventory/alerts`);
+                    if (alertsRes.ok) {
+                        const alerts = await alertsRes.json();
+
+                        // 更新预警数量
+                        const alertCount = alerts.length;
+                        document.getElementById('alert-count').textContent = alertCount;
+                        document.getElementById('alert-count').style.display = alertCount > 0 ? 'flex' : 'none';
+
+                        // 填充预警表格
+                        const alertsTbody = document.querySelector('#alerts-table tbody');
+                        alertsTbody.innerHTML = '';
+
+                        alerts.slice(0, 5).forEach(alert => {
+                            const row = document.createElement('tr');
+                            const badgeClass = alert.alert_type === '库存不足' ? 'badge bg-danger' : 'badge bg-warning';
+
+                            row.innerHTML = `
+                                <td>${alert.product_code}</td>
+                                <td>${alert.product_name}</td>
+                                <td>${alert.current_stock}</td>
+                                <td><span class="${badgeClass}">${alert.alert_type}</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="adjustStock(${alert.product_id})">
+                                        调整
+                                    </button>
+                                </td>
+                            `;
+                            alertsTbody.appendChild(row);
+                        });
+                    }
+                } catch (error) {
+                    console.error('加载库存预警失败:', error);
+                }
+
+                // 加载库存变动记录
+                try {
+                    const transactionsRes = await fetch(`${API_BASE}/inventory/transactions?limit=10`);
+                    if (transactionsRes.ok) {
+                        const transactions = await transactionsRes.json();
+
+                        // 填充变动记录表格
+                        const transTbody = document.querySelector('#transactions-table tbody');
+                        transTbody.innerHTML = '';
+
+                        transactions.slice(0, 10).forEach(trans => {
+                            const date = new Date(trans.transaction_date).toLocaleString('zh-CN');
+                            const changeClass = trans.quantity_change > 0 ? 'text-success' : 'text-danger';
+                            const changeSign = trans.quantity_change > 0 ? '+' : '';
+                            const typeClass = trans.transaction_type === '采购入库' ? 'badge bg-success' :
+                                            trans.transaction_type === '销售出库' ? 'badge bg-danger' : 'badge bg-info';
+
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td><small>${date}</small></td>
+                                <td><small>${trans.product_name}</small></td>
+                                <td><span class="${typeClass}">${trans.transaction_type}</span></td>
+                                <td class="${changeClass}">${changeSign}${trans.quantity_change}</td>
+                                <td>${trans.quantity_after}</td>
+                            `;
+                            transTbody.appendChild(row);
+                        });
+                    }
+                } catch (error) {
+                    console.error('加载库存变动记录失败:', error);
+                }
+
+                // 加载销售统计
+                try {
+                    const salesRes = await fetch(`${API_BASE}/statistics/sales`);
+                    if (salesRes.ok) {
+                        const salesData = await salesRes.json();
+
+                        // 更新销售统计
+                        if (salesData.monthly && salesData.monthly.length > 0) {
+                            const currentMonth = salesData.monthly[0];
+                            document.getElementById('stat-month-sales').textContent = currentMonth.total_amount ? currentMonth.total_amount.toFixed(2) : '0';
+
+                            // 计算增长率
+                            if (salesData.monthly.length > 1) {
+                                const prevMonth = salesData.monthly[1];
+                                const growth = prevMonth.total_amount > 0 ?
+                                    ((currentMonth.total_amount - prevMonth.total_amount) / prevMonth.total_amount * 100).toFixed(1) : '100';
+                                document.getElementById('stat-sales-growth').textContent = `${growth}%`;
+                                document.getElementById('stat-sales-growth').className =
+                                    growth >= 0 ? 'text-white-50' : 'text-warning';
+                            }
+                        }
+
+                        // 绘制销售趋势图
+                        if (salesData.monthly && salesData.monthly.length > 0) {
+                            drawSalesChart(salesData.monthly);
+                        }
+
+                        // 绘制产品类别分布图
+                        if (salesData.by_category && salesData.by_category.length > 0) {
+                            drawCategoryChart(salesData.by_category);
+                        }
+                    }
+                } catch (error) {
+                    console.error('加载销售统计失败:', error);
+                }
+
+                console.log('仪表盘数据加载完成');
+
+            } catch (error) {
+                console.error('加载仪表盘数据失败:', error);
+                updateConnectionStatus(false, '数据加载失败');
+
+                // 显示错误但不要弹窗，避免干扰用户
+                const errorElement = document.getElementById('stat-total-value');
+                if (errorElement) {
+                    errorElement.textContent = '加载失败';
+                }
+            }
+        }
+
+        // ==================== 产品管理 ====================
+        async function loadProducts(page = 1) {
+            try {
+                showLoading(true);
+
+                const material = document.getElementById('filter-material').value;
+                const category = document.getElementById('filter-category').value;
+                const status = document.getElementById('filter-status').value;
+                const search = document.getElementById('search-product').value;
+
+                let url = `${API_BASE}/products?page=${page}&limit=10`;
+                if (material) url += `&material_type=${material}`;
+                if (category) url += `&category_id=${category}`;
+                if (status) url += `&status=${status}`;
+                if (search) url += `&search=${encodeURIComponent(search)}`;
+
+                const res = await fetch(url);
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+
+                const data = await res.json();
+                // 使用数据清洗函数确保数据类型正确
+                productsData = sanitizeProductData(data.data);
+
+                // 填充产品表格
+                const tbody = document.querySelector('#products-table tbody');
+                tbody.innerHTML = '';
+
+                if (productsData.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="fas fa-box-open fa-2x mb-3"></i>
+                                <p>暂无产品数据</p>
+                                <button class="btn btn-primary btn-sm" onclick="showNewProductModal()">
+                                    <i class="fas fa-plus me-1"></i>添加第一个产品
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    productsData.forEach(product => {
+                        const materialBadge = product.material_type === '氟胶' ?
+                            '<span class="material-badge material-fluor">氟胶</span>' :
+                            '<span class="material-badge material-gasket">垫片</span>';
+
+                        const statusBadge = product.status === '正常' ?
+                            '<span class="status-badge status-active">正常</span>' :
+                            '<span class="status-badge status-inactive">停用</span>';
+
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><strong>${product.product_code}</strong></td>
+                            <td>${product.product_name}</td>
+                            <td>${product.category_name || '-'}</td>
+                            <td>${materialBadge}</td>
+                            <td><small class="text-muted">${product.specification || '-'}</small></td>
+                            <td>¥${product.unit_price.toFixed(2)}</td>
+                            <td>
+                                <span class="${product.current_stock < product.min_stock_level ? 'text-danger fw-bold' : ''}">
+                                    ${product.current_stock}
+                                </span>
+                            </td>
+                            <td>${statusBadge}</td>
+                            <td>
+                                <div class="btn-action-group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editProduct(${product.product_id})" title="编辑">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info" onclick="viewProduct(${product.product_id})" title="查看">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct(${product.product_id})" title="删除">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+
+                // 更新分页
+                currentPage = page;
+                totalPages = data.total_pages || 1;
+                updatePagination('products-pagination', page, totalPages, loadProducts);
+
+            } catch (error) {
+                console.error('加载产品列表失败:', error);
+                const tbody = document.querySelector('#products-table tbody');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center text-danger py-4">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                            <p>加载失败: ${error.message}</p>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="testConnection()">
+                                <i class="fas fa-plug me-1"></i>测试连接
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 显示新建产品模态框
+        function showNewProductModal() {
+            // 生成产品编码
+            const productCode = `P${(productsData.length + 1).toString().padStart(3, '0')}`;
+            document.getElementById('new-product-code').value = productCode;
+
+            const modal = new bootstrap.Modal(document.getElementById('newProductModal'));
+            document.getElementById('new-product-form').reset();
+            modal.show();
+        }
+
+        // 提交新产品
+        async function submitNewProduct() {
+            try {
+                const form = document.getElementById('new-product-form');
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+
+                console.log("提交产品数据:", data);
+
+                // 验证必要字段
+                if (!data.product_code || !data.product_name || !data.material_type || !data.unit_price) {
+                    alert('请填写所有必填字段（产品编码、名称、材料类型、单价）');
+                    return;
+                }
+
+                // 转换数据类型
+                data.unit_price = parseFloat(data.unit_price);
+                data.current_stock = parseInt(data.current_stock) || 0;
+                data.min_stock_level = parseInt(data.min_stock_level) || 10;
+                data.max_stock_level = parseInt(data.max_stock_level) || 1000;
+
+                if (data.category_id) {
+                    data.category_id = parseInt(data.category_id);
+                }
+
+                console.log("转换后数据:", data);
+
+                showLoading(true);
+
+                // 发送创建产品请求
+                const res = await fetch(`${API_BASE}/products`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                console.log("响应状态:", res.status, res.statusText);
+
+                if (res.ok) {
+                    const result = await res.json();
+                    console.log("创建成功:", result);
+
+                    alert(`✅ 产品创建成功！\n产品ID: ${result.product_id}\n产品编码: ${result.product_code}`);
+
+                    // 关闭模态框
+                    bootstrap.Modal.getInstance(document.getElementById('newProductModal')).hide();
+
+                    // 刷新数据
+                    if (document.getElementById('products').classList.contains('active')) {
+                        loadProducts(currentPage);
+                    }
+
+                    loadDashboardData();
+
+                } else {
+                    const error = await res.json();
+                    console.error("创建失败:", error);
+                    alert(`❌ 创建失败: ${error.error || '未知错误'}\n\n请检查:\n1. 数据库连接\n2. 产品编码是否重复\n3. 所有必填字段是否已填写`);
+                }
+
+            } catch (error) {
+                console.error('创建产品失败:', error);
+                alert(`❌ 创建产品失败: ${error.message}\n\n请检查网络连接和API服务状态`);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 编辑产品
+        async function editProduct(productId) {
+            try {
+                showLoading(true);
+
+                // 获取产品详情
+                const res = await fetch(`${API_BASE}/products/${productId}`);
+                if (!res.ok) {
+                    throw new Error('获取产品信息失败');
+                }
+
+                const product = await res.json();
+
+                // 确保数据类型的正确性
+                product.unit_price = parseFloat(product.unit_price) || 0;
+                product.current_stock = parseInt(product.current_stock) || 0;
+                product.min_stock_level = parseInt(product.min_stock_level) || 10;
+                product.max_stock_level = parseInt(product.max_stock_level) || 1000;
+
+                // 创建编辑模态框HTML
+                const modalHtml = `
+                    <div class="modal fade" id="editProductModalInstance" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">编辑产品</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <form id="edit-product-form">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">产品编码</label>
+                                                <input type="text" class="form-control" value="${product.product_code}" disabled>
+                                                <small class="text-muted">产品编码不可修改</small>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">产品名称 *</label>
+                                                <input type="text" class="form-control" name="product_name" value="${product.product_name}" required>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">材料类型 *</label>
+                                                <select class="form-select" name="material_type" required>
+                                                    <option value="氟胶" ${product.material_type === '氟胶' ? 'selected' : ''}>氟胶</option>
+                                                    <option value="垫片" ${product.material_type === '垫片' ? 'selected' : ''}>垫片</option>
+                                                    <option value="其他" ${product.material_type === '其他' ? 'selected' : ''}>其他</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">单价 (元) *</label>
+                                                <input type="number" class="form-control" name="unit_price" value="${product.unit_price}" step="0.01" required>
+                                            </div>
+                                            <div class="col-md-12 mb-3">
+                                                <label class="form-label">规格描述</label>
+                                                <textarea class="form-control" name="specification" rows="2">${product.specification || ''}</textarea>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">当前库存</label>
+                                                <input type="number" class="form-control" name="current_stock" value="${product.current_stock}">
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">最低库存</label>
+                                                <input type="number" class="form-control" name="min_stock_level" value="${product.min_stock_level}">
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">最高库存</label>
+                                                <input type="number" class="form-control" name="max_stock_level" value="${product.max_stock_level}">
+                                            </div>
+                                            <div class="col-md-12 mb-3">
+                                                <label class="form-label">仓库位置</label>
+                                                <input type="text" class="form-control" name="warehouse_location" value="${product.warehouse_location || ''}">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">状态</label>
+                                                <select class="form-select" name="status">
+                                                    <option value="正常" ${product.status === '正常' ? 'selected' : ''}>正常</option>
+                                                    <option value="停用" ${product.status === '停用' ? 'selected' : ''}>停用</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                    <button type="button" class="btn btn-primary" onclick="updateProduct(${product.product_id})">保存修改</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // 移除旧的模态框（如果有）
+                const oldModal = document.getElementById('editProductModalInstance');
+                if (oldModal) oldModal.remove();
+
+                // 添加新的模态框
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+                // 显示模态框
+                const modal = new bootstrap.Modal(document.getElementById('editProductModalInstance'));
+                modal.show();
+
+            } catch (error) {
+                console.error('编辑产品失败:', error);
+                alert('编辑产品失败: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 更新产品
+        async function updateProduct(productId) {
+            try {
+                const form = document.getElementById('edit-product-form');
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+
+                // 转换数据类型
+                data.unit_price = parseFloat(data.unit_price);
+                data.current_stock = parseInt(data.current_stock) || 0;
+                data.min_stock_level = parseInt(data.min_stock_level) || 10;
+                data.max_stock_level = parseInt(data.max_stock_level) || 1000;
+
+                console.log("更新产品数据:", data);
+
+                showLoading(true);
+
+                const res = await fetch(`${API_BASE}/products/${productId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    const result = await res.json();
+                    alert('✅ 产品更新成功！');
+
+                    // 关闭模态框
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editProductModalInstance'));
+                    modal.hide();
+
+                    // 移除模态框元素
+                    setTimeout(() => {
+                        const modalElement = document.getElementById('editProductModalInstance');
+                        if (modalElement) modalElement.remove();
+                    }, 300);
+
+                    // 刷新数据
+                    if (document.getElementById('products').classList.contains('active')) {
+                        loadProducts(currentPage);
+                    }
+
+                    loadDashboardData();
+
+                } else {
+                    const error = await res.json();
+                    alert(`❌ 更新失败: ${error.error || '未知错误'}`);
+                }
+
+            } catch (error) {
+                console.error('更新产品失败:', error);
+                alert('更新产品失败: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 查看产品详情
+        async function viewProduct(productId) {
+            try {
+                showLoading(true);
+
+                // 获取产品详情
+                const res = await fetch(`${API_BASE}/products/${productId}`);
+                if (!res.ok) {
+                    throw new Error('获取产品信息失败');
+                }
+
+                const product = await res.json();
+
+                // 确保数据类型的正确性
+                product.unit_price = parseFloat(product.unit_price) || 0;
+                product.current_stock = parseInt(product.current_stock) || 0;
+                product.min_stock_level = parseInt(product.min_stock_level) || 10;
+                product.max_stock_level = parseInt(product.max_stock_level) || 1000;
+
+                // 显示产品详情
+                alert(`产品详情：
+
+产品编码: ${product.product_code}
+产品名称: ${product.product_name}
+材料类型: ${product.material_type}
+规格描述: ${product.specification || '无'}
+单价: ¥${product.unit_price.toFixed(2)}
+当前库存: ${product.current_stock}
+最低库存: ${product.min_stock_level}
+最高库存: ${product.max_stock_level}
+仓库位置: ${product.warehouse_location || '未指定'}
+状态: ${product.status}
+创建时间: ${new Date(product.created_at).toLocaleString('zh-CN')}
+更新时间: ${new Date(product.updated_at).toLocaleString('zh-CN')}`);
+
+            } catch (error) {
+                console.error('查看产品失败:', error);
+                alert('查看产品失败: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 删除产品
+        async function deleteProduct(productId) {
+            if (!confirm('⚠️  确定要删除这个产品吗？此操作不可撤销！')) {
+                return;
+            }
+
+            try {
+                showLoading(true);
+
+                const res = await fetch(`${API_BASE}/products/${productId}`, {
+                    method: 'DELETE'
+                });
+
+                if (res.ok) {
+                    const result = await res.json();
+                    alert('✅ 产品删除成功！');
+
+                    // 刷新数据
+                    if (document.getElementById('products').classList.contains('active')) {
+                        loadProducts(currentPage);
+                    }
+
+                    loadDashboardData();
+
+                } else {
+                    const error = await res.json();
+                    alert(`❌ 删除失败: ${error.error || '未知错误'}`);
+                }
+
+            } catch (error) {
+                console.error('删除产品失败:', error);
+                alert('删除产品失败: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // ==================== 库存管理 ====================
+        async function loadInventory() {
+            try {
+                showLoading(true);
+
+                const res = await fetch(`${API_BASE}/products?limit=1000`);
+                if (!res.ok) {
+                    throw new Error('加载库存数据失败');
+                }
+
+                const data = await res.json();
+                // 使用数据清洗函数确保数据类型正确
+                const products = sanitizeProductData(data.data);
+
+                let fluorTotal = 0;
+                let gasketTotal = 0;
+                let fluorValue = 0;
+                let gasketValue = 0;
+                let totalValue = 0;
+
+                // 计算统计数据
+                products.forEach(product => {
+                    const value = product.current_stock * product.unit_price;
+                    totalValue += value;
+
+                    if (product.material_type === '氟胶') {
+                        fluorTotal += product.current_stock;
+                        fluorValue += value;
+                    } else if (product.material_type === '垫片') {
+                        gasketTotal += product.current_stock;
+                        gasketValue += value;
+                    }
+                });
+
+                // 更新统计信息
+                document.getElementById('fluor-total-value').textContent = fluorValue.toFixed(2);
+                document.getElementById('gasket-total-value').textContent = gasketValue.toFixed(2);
+
+                // 计算进度条（基于库存比例，这里简化处理）
+                const fluorPercent = Math.min(100, (fluorTotal / 5000 * 100));
+                const gasketPercent = Math.min(100, (gasketTotal / 8000 * 100));
+
+                document.getElementById('fluor-progress').style.width = `${fluorPercent}%`;
+                document.getElementById('gasket-progress').style.width = `${gasketPercent}%`;
+
+                // 填充库存表格
+                const tbody = document.querySelector('#inventory-table tbody');
+                tbody.innerHTML = '';
+
+                if (products.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="fas fa-warehouse fa-2x mb-3"></i>
+                                <p>暂无库存数据</p>
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    products.forEach(product => {
+                        let statusText = '';
+                        let statusClass = '';
+
+                        if (product.current_stock < product.min_stock_level) {
+                            statusText = `库存不足 (缺${product.min_stock_level - product.current_stock})`;
+                            statusClass = 'text-danger fw-bold';
+                        } else if (product.current_stock > product.max_stock_level) {
+                            statusText = `库存过剩 (超${product.current_stock - product.max_stock_level})`;
+                            statusClass = 'text-warning fw-bold';
+                        } else {
+                            statusText = '库存正常';
+                            statusClass = 'text-success';
+                        }
+
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${product.product_code}</td>
+                            <td>${product.product_name}</td>
+                            <td>
+                                ${product.material_type === '氟胶' ?
+                                    '<span class="material-badge material-fluor">氟胶</span>' :
+                                    '<span class="material-badge material-gasket">垫片</span>'}
+                            </td>
+                            <td>${product.current_stock}</td>
+                            <td>${product.min_stock_level}</td>
+                            <td>${product.max_stock_level}</td>
+                            <td class="${statusClass}">${statusText}</td>
+                            <td><small class="text-muted">${product.warehouse_location || '未指定'}</small></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="adjustStock(${product.product_id})">
+                                    调整库存
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+
+            } catch (error) {
+                console.error('加载库存数据失败:', error);
+                const tbody = document.querySelector('#inventory-table tbody');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center text-danger py-4">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                            <p>加载失败: ${error.message}</p>
+                        </td>
+                    </tr>
+                `;
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 调整库存
+        async function adjustStock(productId) {
+            try {
+                // 获取当前产品信息
+                const res = await fetch(`${API_BASE}/products/${productId}`);
+                if (!res.ok) {
+                    throw new Error('获取产品信息失败');
+                }
+
+                const product = await res.json();
+
+                // 确保数据类型的正确性
+                product.current_stock = parseInt(product.current_stock) || 0;
+                product.min_stock_level = parseInt(product.min_stock_level) || 10;
+                product.max_stock_level = parseInt(product.max_stock_level) || 1000;
+                
+                const newStock = prompt(`调整产品 "${product.product_name}" 的库存\n当前库存: ${product.current_stock}\n最低库存: ${product.min_stock_level}\n最高库存: ${product.max_stock_level}\n\n请输入新的库存数量:`, product.current_stock);
+                
+                if (newStock !== null) {
+                    const quantity = parseInt(newStock);
+                    if (!isNaN(quantity) && quantity >= 0) {
+                        showLoading(true);
+                        
+                        // 调用API调整库存
+                        const adjustRes = await fetch(`${API_BASE}/inventory/adjust`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                product_id: productId,
+                                quantity: quantity,
+                                notes: '手动调整库存'
+                            })
+                        });
+                        
+                        if (adjustRes.ok) {
+                            const result = await adjustRes.json();
+                            alert(`✅ 库存调整成功！\n原库存: ${result.old_stock}\n新库存: ${result.new_stock}\n变动: ${result.change > 0 ? '+' : ''}${result.change}`);
+                            
+                            // 刷新数据
+                            loadDashboardData();
+                            if (document.getElementById('inventory').classList.contains('active')) {
+                                loadInventory();
+                            }
+                            
+                        } else {
+                            const error = await adjustRes.json();
+                            alert(`❌ 库存调整失败: ${error.error}`);
+                        }
+                        
+                        showLoading(false);
+                    } else {
+                        alert('请输入有效的数字');
+                    }
+                }
+                
+            } catch (error) {
+                console.error('调整库存失败:', error);
+                alert('调整库存失败: ' + error.message);
+                showLoading(false);
+            }
+        }
+        
+        // ==================== 图表函数 ====================
+        // 绘制销售趋势图
+        function drawSalesChart(monthlyData) {
+            const ctx = document.getElementById('salesChart').getContext('2d');
+            
+            // 如果已有图表实例，销毁它
+            if (window.salesChart) {
+                window.salesChart.destroy();
+            }
+            
+            // 反转数据，使时间从早到晚
+            const reversedData = [...monthlyData].reverse();
+            
+            window.salesChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: reversedData.map(d => d.month),
+                    datasets: [{
+                        label: '销售额 (元)',
+                        data: reversedData.map(d => d.total_amount || 0),
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.3,
+                        fill: true,
+                        pointBackgroundColor: '#3498db',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `销售额: ¥${context.parsed.y.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '¥' + value;
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0,0,0,0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(0,0,0,0.05)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 绘制产品类别分布图
+        function drawCategoryChart(categoryData) {
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            
+            // 如果已有图表实例，销毁它
+            if (window.categoryChart) {
+                window.categoryChart.destroy();
+            }
+            
+            window.categoryChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: categoryData.map(d => `${d.material_type || '其他'}`),
+                    datasets: [{
+                        data: categoryData.map(d => d.total_amount || 0),
+                        backgroundColor: [
+                            '#3498db', '#2ecc71', '#e74c3c', '#f39c12',
+                            '#9b59b6', '#1abc9c', '#d35400', '#34495e'
+                        ],
+                        borderWidth: 1,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    return `${label}: ¥${value.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '60%'
+                }
+            });
+        }
+        
+        // ==================== 其他功能 ====================
+        // 加载产品类别
+        async function loadCategories() {
+            // 这里简化处理，实际应该从API获取
+            const categories = [
+                {category_id: 1, category_name: '密封件'},
+                {category_id: 2, category_name: '垫片'},
+                {category_id: 3, category_name: 'O型圈'},
+                {category_id: 4, category_name: '其他配件'}
+            ];
+            
+            const select = document.getElementById('product-category-select');
+            select.innerHTML = '<option value="">选择类别</option>';
+            
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.category_id;
+                option.textContent = cat.category_name;
+                select.appendChild(option);
+            });
+        }
+        
+        // 更新分页控件
+        function updatePagination(elementId, currentPage, totalPages, callback) {
+            const pagination = document.getElementById(elementId);
+            if (!pagination) return;
+            
+            pagination.innerHTML = '';
+            
+            // 上一页按钮
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = `<a class="page-link" href="#" ${currentPage === 1 ? 'tabindex="-1"' : ''}><i class="fas fa-chevron-left"></i></a>`;
+            prevLi.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (currentPage > 1) callback(currentPage - 1);
+            });
+            pagination.appendChild(prevLi);
+            
+            // 页码按钮
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, startPage + 4);
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageLi = document.createElement('li');
+                pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                pageLi.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+                pageLi.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (i !== currentPage) callback(i);
+                });
+                pagination.appendChild(pageLi);
+            }
+            
+            // 下一页按钮
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            nextLi.innerHTML = `<a class="page-link" href="#" ${currentPage === totalPages ? 'tabindex="-1"' : ''}><i class="fas fa-chevron-right"></i></a>`;
+            nextLi.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (currentPage < totalPages) callback(currentPage + 1);
+            });
+            pagination.appendChild(nextLi);
+        }
+        
+        // 导出产品
+        function exportProducts() {
+            if (productsData.length === 0) {
+                alert('没有产品数据可以导出');
+                return;
+            }
+            
+            // 创建CSV内容
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            csvContent += "产品编码,产品名称,材料类型,规格,单价,库存,最低库存,最高库存,仓库位置,状态\n";
+            
+            productsData.forEach(product => {
+                const row = [
+                    product.product_code,
+                    product.product_name,
+                    product.material_type,
+                    product.specification || '',
+                    product.unit_price,
+                    product.current_stock,
+                    product.min_stock_level,
+                    product.max_stock_level,
+                    product.warehouse_location || '',
+                    product.status
+                ];
+                csvContent += row.join(',') + "\n";
+            });
+            
+            // 创建下载链接
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `产品列表_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert(`✅ 已导出 ${productsData.length} 个产品数据`);
+        }
+        
+        // 显示系统信息
+        async function showSystemInfo() {
+            try {
+                const res = await fetch(`${API_BASE}/test`);
+                let statusHtml = '';
+                let endpointsHtml = '';
+                let databaseHtml = '';
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    statusHtml = `<span class="text-success">✅ ${data.message}</span>`;
+                    
+                    if (data.endpoints) {
+                        endpointsHtml = Object.entries(data.endpoints).map(([name, endpoint]) => 
+                            `<li><strong>${name}:</strong> ${endpoint}</li>`
+                        ).join('');
+                    }
+                    
+                    databaseHtml = data.database === 'connected' ? 
+                        '<span class="text-success">✅ 数据库连接正常</span>' : 
+                        '<span class="text-danger">❌ 数据库连接失败</span>';
+                } else {
+                    statusHtml = '<span class="text-danger">❌ API连接失败</span>';
+                    databaseHtml = '<span class="text-danger">❌ 无法检查数据库状态</span>';
+                }
+                
+                document.getElementById('system-info-status').innerHTML = statusHtml;
+                document.getElementById('system-info-endpoints').innerHTML = endpointsHtml || '<li>无可用端点信息</li>';
+                document.getElementById('system-info-database').innerHTML = databaseHtml;
+                
+                const modal = new bootstrap.Modal(document.getElementById('systemInfoModal'));
+                modal.show();
+                
+            } catch (error) {
+                console.error('获取系统信息失败:', error);
+                alert('获取系统信息失败: ' + error.message);
+            }
+        }
+        
+        // 更新API地址
+        function updateApiUrl() {
+            const newUrl = document.getElementById('api-url').value;
+            if (newUrl && newUrl !== API_BASE) {
+                API_BASE = newUrl;
+                document.getElementById('current-api-url').textContent = newUrl;
+                alert(`API地址已更新为: ${newUrl}\n\n正在测试新连接...`);
+                testConnection();
+            }
+        }
+        
+        // 加载所有数据
+        function loadAllData() {
+            loadDashboardData();
+            loadProducts(1);
+            loadInventory();
+            alert('正在重新加载所有数据...');
+        }
+        
+        // 清除缓存
+        function clearCache() {
+            if (confirm('确定要清除本地缓存吗？这不会删除服务器数据。')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                alert('✅ 缓存已清除，页面将刷新...');
+                location.reload();
+            }
+        }
+        
+        // 加载系统设置信息
+        function loadSystemInfo() {
+            // 更新最后同步时间
+            document.getElementById('last-sync').textContent = new Date().toLocaleString('zh-CN');
+            
+            // 检查数据库状态
+            fetch(`${API_BASE}/test`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('database-status').innerHTML = 
+                        data.database === 'connected' ? 
+                        '<span class="text-success">✅ 数据库连接正常</span>' : 
+                        '<span class="text-danger">❌ 数据库连接失败</span>';
+                })
+                .catch(() => {
+                    document.getElementById('database-status').innerHTML = 
+                        '<span class="text-danger">❌ 无法检查数据库状态</span>';
+                });
+        }
+        
+        // 报表相关功能（简化版）
+        async function loadReports() {
+            // 默认显示月度销售报表
+            const startDate = new Date();
+            startDate.setMonth(startDate.getMonth() - 6);
+            
+            document.getElementById('report-start-date').value = startDate.toISOString().split('T')[0];
+            document.getElementById('report-end-date').value = new Date().toISOString().split('T')[0];
+            
+            generateReport();
+        }
+        
+        async function generateReport() {
+            try {
+                const dimension = document.getElementById('report-dimension').value;
+                
+                // 这里简化处理，实际应该调用API获取报表数据
+                let labels = [];
+                let data = [];
+                
+                if (dimension === 'monthly') {
+                    labels = ['1月', '2月', '3月', '4月', '5月', '6月'];
+                    data = [12000, 19000, 15000, 25000, 22000, 30000];
+                } else if (dimension === 'category') {
+                    labels = ['氟胶制品', '垫片制品', '其他配件'];
+                    data = [45000, 32000, 12000];
+                }
+                
+                // 绘制报表图表
+                drawReportChart(labels, data, dimension);
+                
+            } catch (error) {
+                console.error('生成报表失败:', error);
+            }
+        }
+        
+        function drawReportChart(labels, data, dimension) {
+            const ctx = document.getElementById('reportChart').getContext('2d');
+            
+            // 如果已有图表实例，销毁它
+            if (window.reportChart) {
+                window.reportChart.destroy();
+            }
+            
+            const chartType = dimension === 'category' ? 'bar' : 'line';
+            
+            window.reportChart = new Chart(ctx, {
+                type: chartType,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: dimension === 'category' ? '销售额 (元)' : '月度销售额',
+                        data: data,
+                        backgroundColor: dimension === 'category' ? [
+                            '#3498db', '#2ecc71', '#e74c3c'
+                        ] : 'rgba(52, 152, 219, 0.2)',
+                        borderColor: dimension === 'category' ? [
+                            '#2980b9', '#27ae60', '#c0392b'
+                        ] : '#3498db',
+                        borderWidth: dimension === 'category' ? 1 : 2,
+                        fill: dimension !== 'category'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: dimension !== 'category'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `销售额: ¥${context.parsed.y.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '¥' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 其他模态框函数（简化版）
+        function showNewCustomerModal() {
+            alert('新建客户功能正在开发中...');
+        }
+        
+        function showNewSupplierModal() {
+            alert('新建供应商功能正在开发中...');
+        }
+        
+        function showDatabaseStatus() {
+            alert('数据库状态检查功能正在开发中...');
+        }
+        
+        // 初始化产品编码
+        function generateProductCode() {
+            const now = new Date();
+            const code = `P${now.getFullYear().toString().slice(-2)}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}${now.getHours().toString().padStart(2,'0')}${now.getMinutes().toString().padStart(2,'0')}`;
+            return code;
+        }
+        
+        // 页面加载完成后设置产品编码
+        document.addEventListener('DOMContentLoaded', function() {
+            const productCodeInput = document.getElementById('new-product-code');
+            if (productCodeInput) {
+                productCodeInput.value = generateProductCode();
+            }
+        });
+        
+        // 自动刷新连接状态
+        setInterval(() => {
+            if (!connectionStatus) {
+                testConnection();
+            }
+        }, 30000); // 每30秒检查一次连接
+        
+        // 添加全局错误处理
+        window.addEventListener('error', function(e) {
+            console.error('全局错误:', e);
+        });
+        
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('未处理的Promise拒绝:', e.reason);
+        });
+    </script>
+</body>
+</html>
